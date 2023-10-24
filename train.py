@@ -3,7 +3,7 @@ import torchvision
 import argparse
 from torchvision import transforms
 from torch import nn
-from utils.engine import train, get_dataset_and_dataLoader, visualize
+from utils.engine import train, get_dataset_and_dataLoader, visualize, get_pretrained_resnet152
 from pathlib import Path
 
 
@@ -15,9 +15,9 @@ def parse_args():
     parser.add_argument('--data_root',
                         default=r'D:/Van/Deep_learning/Data/',
                         help='The root path of data.')
-    parser.add_argument('--test_file',
-                        default=r'D:/Van/Deep_learning/Data/test.csv',
-                        help='The path of test csv file.')
+    parser.add_argument('--num_classes',
+                        default=6,
+                        help='The number of classes of dataset.')
     parser.add_argument('--epoch',
                         default=30,
                         help='Total train epochs.')
@@ -33,17 +33,8 @@ def main():
     args = parse_args()
 
     if args.pretrained:
-        # Get pretrained checkpoint
-        weights = torchvision.models.ResNet152_Weights.DEFAULT
 
-        # Get resnet152 model
-        resnet = torchvision.models.resnet152(weights=weights)
-
-        # Get the output channels before fc layer
-        resnet_fc_in = resnet.fc.in_features
-
-        # Set output channels into AOI classes
-        resnet.fc = nn.Linear(resnet_fc_in, 6)
+        resnet152 = get_pretrained_resnet152(num_classes=args.num_classes)
 
         # Define transforms
         train_transform = transforms.Compose([
@@ -87,11 +78,11 @@ def main():
 
         # Define loss function and optimizer
         loss_fn = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(params=resnet.parameters(),
+        optimizer = torch.optim.Adam(params=resnet152.parameters(),
                                      lr=.001)
 
         # Train model
-        result, save_path = train(model=resnet,
+        result, save_path = train(model=resnet152,
                                   train_dataloader=train_dataloader,
                                   valid_dataloader=valid_dataloader,
                                   optimizer=optimizer,
@@ -100,7 +91,7 @@ def main():
 
         # Check if need visualize
         if args.visualize:
-            visualize(model=resnet,
+            visualize(model=resnet152,
                       dataset=valid_dataset,
                       dataloader=valid_dataloader,
                       results=result,

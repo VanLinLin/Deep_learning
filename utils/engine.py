@@ -1,7 +1,9 @@
 import torch
 import pandas as pd
 import datetime
+import torchvision
 import matplotlib.pyplot as plt
+from torch import nn
 from pathlib import Path
 from tqdm.auto import tqdm
 from timeit import default_timer as timer
@@ -464,3 +466,19 @@ def visualize(model: torch.nn.Module,
                  dataset=dataset,
                  dataloader=dataloader,
                  save_path=vis_path)
+
+# Pretrained resnet152
+def get_pretrained_resnet152(num_classes):
+    # Get pretrained checkpoint
+    weights = torchvision.models.ResNet152_Weights.DEFAULT
+
+    # Get resnet152 model
+    resnet152 = torchvision.models.resnet152(weights=weights)
+
+    # Get the output channels before fc layer
+    resnet152_fc_in = resnet152.fc.in_features
+
+    # Set output channels into AOI classes
+    resnet152.fc = nn.Linear(resnet152_fc_in, int(num_classes))
+
+    return resnet152
