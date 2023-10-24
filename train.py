@@ -17,7 +17,7 @@ def parse_args():
                         help='The root path of data.')
     parser.add_argument('--num_classes',
                         default=6,
-                        help='The number of classes of dataset.')
+                        help='The number of classes of dataset. (Default: AOI dataset)')
     parser.add_argument('--epoch',
                         default=30,
                         help='Total train epochs.')
