@@ -175,8 +175,10 @@ def train(model: torch.nn.Module,
     # Setup saving path
     date = datetime.datetime.now()
     date_info = F"{date.year}{date.month}{date.day}{date.hour}{date.minute}{date.second}"
-    save_path = Path(
-        F"runs/{model._get_name()}/{date_info}").mkdir(parents=True, exist_ok=True)
+    model_name = model._get_name()
+    print(model_name)
+    save_path = Path(F"runs/{model_name}/{date_info}")
+    save_path.mkdir(parents=True, exist_ok=True)
     checkpoint_path = F"{save_path}/weights"
     log_path = F"{save_path}/logs/info.log"
     Path(checkpoint_path).mkdir(parents=True, exist_ok=True)
@@ -205,7 +207,7 @@ def train(model: torch.nn.Module,
                 F"valid loss: {valid_loss: .4f} | " \
                 F"valid accuracy: {valid_acc: .4f}"
 
-            print(F"\n{message}")
+            print(F"\n{message}\n")
 
             f.write(message)
 
@@ -220,7 +222,7 @@ def train(model: torch.nn.Module,
                 print(
                     F"Saving best checkpoint with minimum valid loss {valid_loss:.4f} in {save_path}/weights")
 
-                message += F"\nSaving best checkpoint with minimum valid loss {valid_loss:.4f}."
+                message += F"\nSaving best checkpoint with minimum valid loss {valid_loss:.4f}.\n"
 
                 f.write(message)
 
@@ -274,7 +276,7 @@ def test_step(model: torch.nn.Module,
     if csv_file:
         csv_df = pd.read_csv(csv_file)
         csv_df.Label = labels
-        csv_df.to_csv(F"{Path(save_path).parent}/result.csv", index=False)
+        csv_df.to_csv(F"{save_path}/result.csv", index=False)
 
 
 # Define custom dataset
@@ -349,46 +351,55 @@ def get_dataset_and_dataLoader(data_setting: dict) -> Tuple[Dataset, DataLoader,
     """
     train_dataloader, valid_dataloader, test_dataloader = [], [], []
     train_dataset, valid_dataset, test_dataset = [], [], []
-    if data_setting['train_data']:
-        if data_setting['train_data']['type'].casefold() == 'ImageFolder'.casefold():
-            # Define dataset
-            train_dataset = datasets.ImageFolder(root=data_setting['train_data']['path'],
-                                                 transform=data_setting['train_data']['transform'])
+    try:
+        if data_setting['train_data']:
+            if data_setting['train_data']['type'].casefold() == 'ImageFolder'.casefold():
+                # Define dataset
+                train_dataset = datasets.ImageFolder(root=data_setting['train_data']['path'],
+                                                    transform=data_setting['train_data']['transform'])
 
-            # Define dataloader
-            train_dataloader = DataLoader(dataset=train_dataset,
-                                          batch_size=data_setting['train_data']['batch_size'],
-                                          shuffle=True,
-                                          generator=torch.Generator(device='cpu'))
+                # Define dataloader
+                train_dataloader = DataLoader(dataset=train_dataset,
+                                            batch_size=data_setting['train_data']['batch_size'],
+                                            shuffle=True,
+                                            generator=torch.Generator(device='cpu'))
+    except:
+        assert ("Data setting error! Need train data settings.")
 
-    if data_setting['valid_data']:
-        if data_setting['valid_data']['type'].casefold() == 'ImageFolder'.casefold():
-            # Define dataset
-            valid_dataset = datasets.ImageFolder(root=data_setting['valid_data']['path'],
-                                                 transform=data_setting['valid_data']['transform'])
+    try:
+        if data_setting['valid_data']:
+            if data_setting['valid_data']['type'].casefold() == 'ImageFolder'.casefold():
+                # Define dataset
+                valid_dataset = datasets.ImageFolder(root=data_setting['valid_data']['path'],
+                                                    transform=data_setting['valid_data']['transform'])
 
-            # Define dataloader
-            valid_dataloader = DataLoader(dataset=valid_dataset,
-                                          batch_size=data_setting['valid_data']['batch_size'])
+                # Define dataloader
+                valid_dataloader = DataLoader(dataset=valid_dataset,
+                                            batch_size=data_setting['valid_data']['batch_size'])
+    except:
+        assert ("Data setting error! Need validation data settings.")
 
-    if data_setting['test_data']:
-        if data_setting['test_data']['type'].casefold() == 'ImageFolder'.casefold():
-            # Define dataset
-            test_dataset = datasets.ImageFolder(root=data_setting['test_data']['path'],
+    try:
+        if data_setting['test_data']:
+            if data_setting['test_data']['type'].casefold() == 'ImageFolder'.casefold():
+                # Define dataset
+                test_dataset = datasets.ImageFolder(root=data_setting['test_data']['path'],
+                                                    transform=data_setting['test_data']['transform'])
+
+                # Define dataloader
+                test_dataloader = DataLoader(dataset=test_dataset,
+                                            batch_size=data_setting['test_data']['batch_size'])
+
+            elif data_setting['test_data']['type'].casefold() == 'CustomDataset'.casefold():
+                test_dataset = get_custom_dataset(csv_file=data_setting['test_data']['file'],
+                                                image_path=data_setting['test_data']['path'],
                                                 transform=data_setting['test_data']['transform'])
 
-            # Define dataloader
-            test_dataloader = DataLoader(dataset=test_dataset,
-                                         batch_size=data_setting['test_data']['batch_size'])
-
-        elif data_setting['test_data']['type'].casefold() == 'CustomDataset'.casefold():
-            test_dataset = get_custom_dataset(csv_file=data_setting['test_data']['file'],
-                                              image_path=data_setting['test_data']['path'],
-                                              transform=data_setting['test_data']['transform'])
-
-            # Define test dataLoader
-            test_dataloader = DataLoader(dataset=test_dataset,
-                                         batch_size=data_setting['test_data']['batch_size'])
+                # Define test dataLoader
+                test_dataloader = DataLoader(dataset=test_dataset,
+                                            batch_size=data_setting['test_data']['batch_size'])
+    except:
+        print("No test data setting.")
 
     return train_dataset, train_dataloader, valid_dataset, valid_dataloader, test_dataset, test_dataloader
 
@@ -469,12 +480,18 @@ def visualize(model: torch.nn.Module,
 
 
 # Pretrained resnet152
-def get_pretrained_resnet152(num_classes):
-    # Get pretrained checkpoint
-    weights = torchvision.models.ResNet152_Weights.DEFAULT
+def get_resnet152(num_classes: int, pretrained: bool = False):
 
-    # Get resnet152 model
-    resnet152 = torchvision.models.resnet152(weights=weights)
+    if pretrained:
+        # Get pretrained checkpoint
+        weights = torchvision.models.ResNet152_Weights.DEFAULT
+
+        # Get resnet152 model with pretrained weights
+        resnet152 = torchvision.models.resnet152(weights=weights)
+    else:
+        
+        resnet152 = torchvision.models.resnet152()
+
 
     # Get the output channels before fc layer
     resnet152_fc_in = resnet152.fc.in_features

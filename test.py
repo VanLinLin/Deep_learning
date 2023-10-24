@@ -4,7 +4,8 @@ import torch
 import argparse
 from pathlib import Path
 from torchvision import transforms
-from utils.engine import test_step, get_pretrained_resnet152, get_dataset_and_dataLoader
+from utils.engine import test_step, get_resnet152, get_dataset_and_dataLoader
+
 
 
 def parse_args():
@@ -13,7 +14,7 @@ def parse_args():
                         required=True,
                         help='THe chekcpoint path.')
     parser.add_argument('--data_root',
-                        default=r'D:/Van/Deep_learning/Data/',
+                        required=True,
                         help='The root path of data.')
     parser.add_argument('--csv_file_path',
                         required=True,
@@ -32,7 +33,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    resnet152 = get_pretrained_resnet152(num_classes=args.num_classes)
+    resnet152 = get_resnet152(num_classes=args.num_classes)
 
     resnet152.load_state_dict(torch.load(args.checkpoint_path))
 
@@ -66,7 +67,7 @@ def main():
         ),
         test_data=dict(
             type='CustomDataset',
-            file=args.test_file,
+            file=args.csv_file_path,
             path=data_root / Path('test_images'),
             transform=test_transform,
             batch_size=1
