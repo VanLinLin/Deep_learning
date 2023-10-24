@@ -467,6 +467,7 @@ def visualize(model: torch.nn.Module,
                  dataloader=dataloader,
                  save_path=vis_path)
 
+
 # Pretrained resnet152
 def get_pretrained_resnet152(num_classes):
     # Get pretrained checkpoint
